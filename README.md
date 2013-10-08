@@ -3,7 +3,7 @@ Description
 
 Make search on Magento CE with Apache Solr.
 
-Based on PHP library for Apache Solr : [solr-php-client](http://code.google.com/p/solr-php-client/)
+Based on PHP library for Apache Solr (Revision 66 from svn): [solr-php-client](http://code.google.com/p/solr-php-client/)
 
 * Extension use fulltext for index. You can search in any attributes (Use in Quick Search).
 
