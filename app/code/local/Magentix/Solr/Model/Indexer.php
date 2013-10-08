@@ -14,7 +14,7 @@
  *  - Neither the name of the Magentix nor the names of its contributors
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
  * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
@@ -26,143 +26,175 @@
  * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
  * POSSIBILITY OF SUCH DAMAGE.
- * 
- * @copyright Copyright 2012, Magentix (http://www.magentix.fr)
- * @license http://www.opensource.org/licenses/BSD-3-Clause BSD 3-Clause
- * 
- * @category Solr
- * @package Magentix_Solr
- * @author Matthieu Vion <contact@magentix.fr>
+ *
+ * @copyright   Copyright 2012, Magentix (http://www.magentix.fr)
+ * @license     http://www.opensource.org/licenses/BSD-3-Clause BSD 3-Clause
+ *
+ * @category    Solr
+ * @package     Magentix_Solr
+ * @author      Matthieu Vion <contact@magentix.fr>
  * @contributor Nicolas Trossat <http://www.boutikcircus.com>
  */
 
 class Magentix_Solr_Model_Indexer
 {
-    
+
     /**
-    * Rebuild Solr Index
-    * 
-    * @param Varien_Event_Observer $observer
-    * @param int|array|null $productIds
-    * @return boolean
-    */
+     * Rebuild Solr Index
+     *
+     * @param Varien_Event_Observer $observer
+     * @param int|array|null        $productIds
+     *
+     * @return boolean
+     */
     public function rebuildIndex($productIds = null)
     {
-        $products = $this->_getConnection()->query($this->_buildQuery($productIds));
-        
-        $documents = array();
-        
-        while($product = $products->fetch()) {
-            $document = Mage::getModel('solr/document');
+//        $this->cleanIndex();
+//        $products = $this->_getConnection()->query($this->_buildQuery($productIds));
+        $products = $this->getProducts($productIds);
 
-            $document->addField('id',$product['fulltext_id']);
-            $document->addField('product_id',$product['product_id']);
-            $document->addField('store_id',$product['store_id']);
-            $document->addField('fulltext',$product['data_index']);
-            
+        $documents = array();
+        foreach ($products as $product) {
+            $document = Mage::getModel('solr/document');
+            $document->addField('name', $product->getName());
+            $document->addField('id', $product->getId());
+            $document->addField('sku', $product->getSku());
+            $document->addField('description', $product->getDescription());
+            $document->addField('short_description', $product->getShortDescription());
+            $document->addField('meta_title', $product->getMetaTitle());
+            $document->addField('meta_description', $product->getMetaDescription());
+            $document->addField('meta_keywords', $product->getMetaKeyword());
+            foreach($product->getStoreIds() as $store_id){
+                $document->addField('store_id', $store_id);
+            }
             $documents[] = $document;
         }
-        
         try {
             $search = Mage::getModel('solr/search');
 
-            if(count($documents)) { $search->addDocuments($documents); }
-            
+            if (count($documents)) {
+                $search->addDocuments($documents);
+            }
+
             $search->commit();
             $search->optimize();
         } catch (Exception $e) {
-            Mage::log($e->getMessage(),3,Mage::helper('solr')->getLogFile());
+            Mage::log($e->getMessage(), 3, Mage::helper('solr')->getLogFile());
+
             return false;
         }
 
         return true;
     }
-    
+
+    private function getProducts($productIds)
+    {
+        $products = Mage::getModel('catalog/product')
+            ->getCollection()
+            ->addAttributeToSelect('name')
+            ->addAttributeToSelect('description')
+            ->addAttributeToSelect('short_description')
+            ->addAttributeToSelect('sku')
+            ->addAttributeToSelect('id')
+            ->addAttributeToSelect('meta_title')
+            ->addAttributeToSelect('meta_keyword')
+            ->addAttributeToSelect('meta_description')
+            ->addAttributeToFilter('entity_id', array('in' => $productIds));
+
+        return $products;
+    }
+
+
     /**
-    * Clean Solr Index
-    * 
-    * @param Varien_Event_Observer $observer
-    * @param int|array|null $productIds
-    * @return boolean
-    */
+     * Clean Solr Index
+     *
+     * @param Varien_Event_Observer $observer
+     * @param int|array|null        $productIds
+     *
+     * @return boolean
+     */
     public function cleanIndex($productIds = null)
     {
         try {
             $search = Mage::getModel('solr/search');
-            
-            if(is_numeric($productIds)) {
+
+            if (is_numeric($productIds)) {
                 $search->deleteDocument($productIds);
-            } else if(is_array($productIds)) {
-                $search->deleteDocuments($productIds);
             } else {
-                $search->deleteAllDocuments();
+                if (is_array($productIds)) {
+                    $search->deleteDocuments($productIds);
+                } else {
+                    $search->deleteAllDocuments();
+                }
             }
 
             $search->commit();
             $search->optimize();
         } catch (Exception $e) {
-            Mage::log($e->getMessage(),3,Mage::helper('solr')->getLogFile());
+            Mage::log($e->getMessage(), 3, Mage::helper('solr')->getLogFile());
+
             return false;
         }
 
         return true;
     }
-    
+
     /**
      * Build Query
-     * 
+     *
      * @param int|array|null $productIds
-     * @param string $where
+     * @param string         $where
+     *
      * @return string
      */
     public function _buildQuery($productIds = null)
     {
-        $query = 'SELECT * FROM '.$this->_getTable('catalogsearch/fulltext');
+        $query = 'SELECT * FROM ' . $this->_getTable('catalogsearch/fulltext');
 
         $where = '';
-        
-        if($productIds) {
-            if(is_numeric($productIds)) {
-                $where .= ' WHERE product_id = '.$productIds;
+
+        if ($productIds) {
+            if (is_numeric($productIds)) {
+                $where .= ' WHERE product_id = ' . $productIds;
             }
-            if(is_array($productIds)) {
-                $where .= ' WHERE product_id IN('.implode(',',$productIds).')';
+            if (is_array($productIds)) {
+                $where .= ' WHERE product_id IN(' . implode(',', $productIds) . ')';
             }
         }
-        
+
         $query .= $where;
-        
+
         return $query;
     }
-    
+
     /**
-    * Retrieve resource
-    * 
-    * @return Mage_Core_Model_Resource
-    */
+     * Retrieve resource
+     *
+     * @return Mage_Core_Model_Resource
+     */
     public function _getResource()
     {
         return Mage::getSingleton('core/resource');
     }
-    
+
     /**
-    * Retrieve connection
-    * 
-    * @return Varien_Db_Adapter_Pdo_Mysql
-    */
+     * Retrieve connection
+     *
+     * @return Varien_Db_Adapter_Pdo_Mysql
+     */
     public function _getConnection()
     {
         return $this->_getResource()->getConnection('core_read');
     }
-    
+
     /**
-    * Retrieve table name
-    * 
-    * @return string
-    */
+     * Retrieve table name
+     *
+     * @return string
+     */
     public function _getTable($tableName)
     {
         return $this->_getResource()->getTableName($tableName);
     }
-    
+
 }

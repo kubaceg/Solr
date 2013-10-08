@@ -64,6 +64,17 @@
             </solr>
         </blocks>
     </global>
+    <frontend>
+        <routers>
+            <solr>
+                <use>standard</use>
+                <args>
+                    <module>Magentix_Solr</module>
+                    <frontName>solr</frontName>
+                </args>
+            </solr>
+        </routers>
+    </frontend>
     <admin>
         <routers>
             <adminhtml>

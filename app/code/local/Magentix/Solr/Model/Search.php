@@ -99,7 +99,7 @@ class Magentix_Solr_Model_Search extends Apache_Solr_Service
      */
     public function deleteDocument($productId)
     {
-        $this->deleteByQuery('product_id:'.$productId);
+        $this->deleteByQuery('id:'.$productId);
         
         return $this;
     }
@@ -113,7 +113,7 @@ class Magentix_Solr_Model_Search extends Apache_Solr_Service
     public function deleteDocuments($productIds)
     {
         foreach($productIds as $id) {
-            $this->deleteByQuery('product_id:'.$id);
+            $this->deleteByQuery('id:'.$id);
         }
         
         return $this;
@@ -138,7 +138,7 @@ class Magentix_Solr_Model_Search extends Apache_Solr_Service
     {
         $products = array();
         foreach($this->_response->docs as $doc) {
-            $products[] = array('product_id' => $doc->product_id,
+            $products[] = array('id' => $doc->id,
                                 'relevance'  => $doc->score);
         }
         return $products;

@@ -68,7 +68,7 @@ class Magentix_Solr_Model_CatalogSearch_Resource_Fulltext extends Mage_CatalogSe
                     $data = array();
                     foreach($products as $product) {
                         $data[] = array('query_id'   => $query->getId(),
-                                        'product_id' => $product['product_id'],
+                                        'id' => $product['product_id'],
                                         'relevance'  => $product['relevance']);
                     }
 
@@ -97,8 +97,10 @@ class Magentix_Solr_Model_CatalogSearch_Resource_Fulltext extends Mage_CatalogSe
      */
     public function rebuildIndex($storeId = null, $productIds = null)
     {
-        parent::rebuildIndex($storeId,$productIds);
+        if(!$productIds)
+            $productIds = Mage::getModel('catalog/product')->getCollection()->getAllIds();
 
+        parent::rebuildIndex($storeId,$productIds);
         if(Mage::getStoreConfigFlag('solr/active/admin')) {
             Mage::getModel('solr/indexer')->rebuildIndex($productIds);
         }
