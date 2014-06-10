@@ -122,9 +122,9 @@ class Magentix_Solr_Model_Search extends Apache_Solr_Service
     /**
      * Set Solr response
      * 
-     * @param Apache_Solr_Response $response
+     * @param $response
      */
-    public function setResponse(Apache_Solr_Response $response)
+    public function setResponse($response)
     {
         $this->_response = $response;
     }
